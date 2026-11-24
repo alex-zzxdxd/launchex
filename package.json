@@ -1,0 +1,45 @@
+{
+  "name": "launchex",
+  "version": "1.1.1",
+  "description": "Launcher oficial by Alex",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "publish": "electron-builder --win --publish always"
+  },
+  "build": {
+    "appId": "com.launchex.app",
+    "productName": "Launchex",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/image.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "alex-zzxdxd",
+      "repo": "launchex"
+    }
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/core": "^7.6.10",
+    "@capacitor/screen-orientation": "^7.0.4",
+    "@supabase/supabase-js": "^2.109.0",
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.6.10",
+    "electron": "33.2.0",
+    "electron-builder": "25.1.8"
+  }
+}

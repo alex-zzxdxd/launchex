@@ -1,0 +1,14 @@
+{
+  "appId": "com.alex.launchex",
+  "appName": "Launchex",
+  "webDir": "src",
+  "server": {
+    "url": "https://launchex.vercel.app",
+    "cleartext": true
+  },
+  "plugins": {
+    "ScreenOrientation": {
+      "initialOrientation": "landscape"
+    }
+  }
+}
