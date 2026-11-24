@@ -48,6 +48,23 @@ body {
   overflow: hidden;
   user-select: none;
 }
+
+.sidebar,
+.content,
+.view-section,
+button,
+a,
+input,
+textarea,
+select {
+  pointer-events: auto;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
 #bg-video {
   position: fixed;
   right: 0;

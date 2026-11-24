@@ -1,5 +1,15 @@
 import { supabase } from './supabase.js';
 
+function getElectronApiMethod(methodName) {
+  const electronApi = window.electronAPI;
+  if (!electronApi || typeof electronApi[methodName] !== 'function') return null;
+  return electronApi[methodName].bind(electronApi);
+}
+
+function showDesktopOnlyMessage() {
+  statusText.textContent = 'Esta función solo está disponible en la aplicación de escritorio.';
+}
+
 const MUSIC_CATALOG = [
   {
     id: 'atrevete-te-te',
@@ -506,8 +516,14 @@ async function applyBackground(backgroundFile) {
 }
 
 async function initializeBackgroundPicker() {
+  const getMediaFiles = getElectronApiMethod('getMediaFiles');
+  if (!getMediaFiles) {
+    showBackgroundPickerMessage('La selección de fondos solo está disponible en la aplicación de escritorio.');
+    return;
+  }
+
   try {
-    backgroundFiles = await window.electronAPI.getMediaFiles();
+    backgroundFiles = await getMediaFiles();
   } catch (error) {
     console.error('No se pudieron leer los fondos de la carpeta assets:', error);
     showBackgroundPickerMessage(error.message || 'No se pudieron cargar los fondos disponibles.');
@@ -616,13 +632,19 @@ const btnClearCache = document.getElementById('btn-clear-cache');
 // --- LÓGICA DEL BOTÓN JUGAR AHORA (MINECRAFT BEDROCK) ---
 if (playBtn) {
   playBtn.addEventListener('click', async () => {
+    const launchMinecraft = getElectronApiMethod('launchMinecraft');
+    if (!launchMinecraft) {
+      showDesktopOnlyMessage();
+      return;
+    }
+
     statusText.textContent = 'Verificando archivos del servidor...';
     playBtn.disabled = true;
     playBtn.style.opacity = '0.6';
 
     try {
       statusText.textContent = 'Iniciando Dedsafío 3...';
-      const result = await window.electronAPI.launchMinecraft();
+      const result = await launchMinecraft();
       statusText.textContent = result.message;
       if (!result.success) alert(result.message);
     } catch (error) {
@@ -649,8 +671,14 @@ function resetPlayButton() {
 // --- LÓGICA DEL BOTÓN DE DISCORD ---
 if (discordBtn) {
   discordBtn.addEventListener('click', async () => {
+    const openDiscord = getElectronApiMethod('openDiscord');
+    if (!openDiscord) {
+      showDesktopOnlyMessage();
+      return;
+    }
+
     try {
-      await window.electronAPI.openDiscord();
+      await openDiscord();
     } catch (error) {
       console.error('No se pudo abrir Discord:', error);
       statusText.textContent = error.message || 'No se pudo abrir Discord.';
@@ -661,10 +689,16 @@ if (discordBtn) {
 // --- LÓGICA DE LOS BOTONES DE AJUSTES DE FPS ---
 if (btnOptHigh) {
   btnOptHigh.addEventListener('click', async () => {
+    const setMinecraftPriority = getElectronApiMethod('setMinecraftPriority');
+    if (!setMinecraftPriority) {
+      showDesktopOnlyMessage();
+      return;
+    }
+
     btnOptHigh.disabled = true;
     statusText.textContent = 'Aplicando prioridad alta al proceso...';
     try {
-      const result = await window.electronAPI.setMinecraftPriority();
+      const result = await setMinecraftPriority();
       statusText.textContent = result.message;
     } catch (error) {
       console.error('No se pudo cambiar la prioridad de Minecraft:', error);
@@ -677,10 +711,16 @@ if (btnOptHigh) {
 
 if (btnClearCache) {
   btnClearCache.addEventListener('click', async () => {
+    const clearCache = getElectronApiMethod('clearCache');
+    if (!clearCache) {
+      showDesktopOnlyMessage();
+      return;
+    }
+
     btnClearCache.disabled = true;
     statusText.textContent = 'Limpiando archivos temporales de caché...';
     try {
-      const result = await window.electronAPI.clearCache();
+      const result = await clearCache();
       statusText.textContent = result.message;
     } catch (error) {
       console.error('No se pudo limpiar la caché:', error);
@@ -850,8 +890,15 @@ function renderMusicCatalog(downloadedFileNames) {
 }
 
 async function loadMusicCatalog() {
+  const getDownloadedTracks = getElectronApiMethod('getDownloadedTracks');
+  if (!getDownloadedTracks) {
+    musicTrackCount.textContent = `0/${MUSIC_CATALOG.length}`;
+    musicTrackList.textContent = 'La biblioteca de música solo está disponible en la aplicación de escritorio.';
+    return;
+  }
+
   try {
-    const downloadedTracks = await window.electronAPI.getDownloadedTracks();
+    const downloadedTracks = await getDownloadedTracks();
     const downloadedByName = new Map(downloadedTracks.map(track => [track.fileName, track]));
     for (const fileName of selectedMusicTracks) {
       if (!downloadedByName.has(fileName)) selectedMusicTracks.delete(fileName);
@@ -883,11 +930,17 @@ async function loadMusicCatalog() {
 }
 
 async function downloadMusicTrack(track) {
+  const downloadTrack = getElectronApiMethod('downloadTrack');
+  if (!downloadTrack) {
+    showDesktopOnlyMessage();
+    return;
+  }
+
   downloadingMusicTracks.add(track.fileName);
   musicDownloadProgress.set(track.fileName, 0);
   renderMusicCatalog(musicTracks);
   try {
-    await window.electronAPI.downloadTrack({ fileName: track.fileName, url: track.url });
+    await downloadTrack({ fileName: track.fileName, url: track.url });
     await loadMusicCatalog();
   } catch (error) {
     console.error(`No se pudo descargar ${track.title}:`, error);
@@ -901,7 +954,14 @@ async function downloadMusicTrack(track) {
 
 async function removeMusicTracks(fileNames, confirmationMessage = '¿Deseas eliminar las canciones seleccionadas?') {
   const uniqueFileNames = [...new Set(fileNames)];
-  if (!uniqueFileNames.length || !window.confirm(confirmationMessage)) return;
+  if (!uniqueFileNames.length) return;
+
+  const deleteTracks = getElectronApiMethod('deleteTracks');
+  if (!deleteTracks) {
+    showDesktopOnlyMessage();
+    return;
+  }
+  if (!window.confirm(confirmationMessage)) return;
 
   musicDeletionInProgress = true;
   musicDeleteSelectedButton.disabled = true;
@@ -919,7 +979,7 @@ async function removeMusicTracks(fileNames, confirmationMessage = '¿Deseas elim
 
   try {
     await loadMusicCatalog();
-    const result = await window.electronAPI.deleteTracks(uniqueFileNames);
+    const result = await deleteTracks(uniqueFileNames);
     if (!result || !Array.isArray(result.deleted) || !Array.isArray(result.failures)) {
       throw new Error('La respuesta del borrado de canciones no es válida.');
     }
@@ -944,13 +1004,18 @@ musicDeleteSelectedButton.addEventListener('click', () => {
   removeMusicTracks([...selectedMusicTracks]);
 });
 
-const unsubscribeTrackDownloadProgress = window.electronAPI.onTrackDownloadProgress(progress => {
-  if (!progress || !downloadingMusicTracks.has(progress.fileName)) return;
-  const percent = Math.max(0, Math.min(100, Number(progress.percent) || 0));
-  musicDownloadProgress.set(progress.fileName, percent);
-  window.requestAnimationFrame(() => renderMusicCatalog(musicTracks));
-});
-window.addEventListener('beforeunload', unsubscribeTrackDownloadProgress, { once: true });
+const onTrackDownloadProgress = getElectronApiMethod('onTrackDownloadProgress');
+if (onTrackDownloadProgress) {
+  const unsubscribeTrackDownloadProgress = onTrackDownloadProgress(progress => {
+    if (!progress || !downloadingMusicTracks.has(progress.fileName)) return;
+    const percent = Math.max(0, Math.min(100, Number(progress.percent) || 0));
+    musicDownloadProgress.set(progress.fileName, percent);
+    window.requestAnimationFrame(() => renderMusicCatalog(musicTracks));
+  });
+  if (typeof unsubscribeTrackDownloadProgress === 'function') {
+    window.addEventListener('beforeunload', unsubscribeTrackDownloadProgress, { once: true });
+  }
+}
 
 musicExtensionBtn.addEventListener('click', async () => {
   musicExtensionBtn.disabled = true;
