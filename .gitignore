@@ -3,3 +3,4 @@ dist/
 electron-bin/
 android/app/build/
 *.jks
+*.apk
