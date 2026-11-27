@@ -199,14 +199,7 @@ const mobileBackgroundPaths = [
   'nutrias.webp',
   're.jpg',
   'reviil medio cuerpo.webp',
-  'rolplayers.webp',
-  'icons/icon-48.webp',
-  'icons/icon-72.webp',
-  'icons/icon-96.webp',
-  'icons/icon-128.webp',
-  'icons/icon-192.webp',
-  'icons/icon-256.webp',
-  'icons/icon-512.webp'
+  'rolplayers.webp'
 ];
 const backgroundThumbnailCache = new Map();
 const backgroundThumbnailPromises = new Map();
