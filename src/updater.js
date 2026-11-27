@@ -1,5 +1,5 @@
 // Cambia esta URL por la ubicación HTTPS definitiva de latest.json.
-const VERSION_URL = 'https://github.com/alex-zzxdxd/launchex/releases/download/v2.4.0/latest.json';
+const VERSION_URL = 'https://raw.githubusercontent.com/alex-zzxdxd/launchex/main/latest.json';
 const APK_INSTALLER = window.Capacitor?.registerPlugin?.('ApkInstaller');
 
 const modal = document.getElementById('update-modal');
