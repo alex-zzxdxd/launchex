@@ -1,6 +1,12 @@
 import { supabase } from './supabase.js';
 
+function isAndroidCapacitor() {
+  return window.Capacitor?.getPlatform?.() === 'android';
+}
+
 function getElectronApiMethod(methodName) {
+  if (isAndroidCapacitor()) return null;
+
   const electronApi = window.electronAPI;
   if (!electronApi || typeof electronApi[methodName] !== 'function') return null;
   return electronApi[methodName].bind(electronApi);
@@ -173,6 +179,8 @@ const MUSIC_CATALOG = [
   }
 ];
 
+const DISCORD_INVITE_URL = 'https://discord.gg/j5pFWK98c9';
+
 // --- VIDEO Y AUDIO DE FONDO ---
 const backgroundVideo = document.getElementById('bg-video');
 const audioToggleBtn = document.getElementById('audio-toggle-btn');
@@ -182,8 +190,24 @@ const backgroundPickerMenu = document.getElementById('background-picker-menu');
 const backgroundPickerList = document.getElementById('background-picker-list');
 const backgroundViewToggle = document.getElementById('background-view-toggle');
 const backgroundViewIcon = document.getElementById('background-view-icon');
-const backgroundStorageKey = 'launchex-selected-background';
+const backgroundStorageKey = 'launchex_bg';
+const legacyBackgroundStorageKey = 'launchex-selected-background';
 const backgroundViewStorageKey = 'launchex-background-view';
+const mobileBackgroundPaths = [
+  'background.mp4',
+  'gato mar.webp',
+  'nutrias.webp',
+  're.jpg',
+  'reviil medio cuerpo.webp',
+  'rolplayers.webp',
+  'icons/icon-48.webp',
+  'icons/icon-72.webp',
+  'icons/icon-96.webp',
+  'icons/icon-128.webp',
+  'icons/icon-192.webp',
+  'icons/icon-256.webp',
+  'icons/icon-512.webp'
+];
 const backgroundThumbnailCache = new Map();
 const backgroundThumbnailPromises = new Map();
 const backgroundPickerItems = new Map();
@@ -412,6 +436,28 @@ function getCleanBackgroundName(backgroundFile) {
     .trim() || backgroundFile.name;
 }
 
+function getMobileBackgroundFiles() {
+  return mobileBackgroundPaths.map(relativePath => {
+    const name = relativePath.slice(relativePath.lastIndexOf('/') + 1);
+    const extension = name.slice(name.lastIndexOf('.')).toLowerCase();
+    return {
+      name,
+      relativePath,
+      extension,
+      url: new URL(`assets/${relativePath}`, document.baseURI).href
+    };
+  });
+}
+
+function getSavedBackgroundPath() {
+  const savedPath = localStorage.getItem(backgroundStorageKey);
+  if (savedPath) return savedPath;
+
+  const legacySavedPath = localStorage.getItem(legacyBackgroundStorageKey);
+  if (legacySavedPath) localStorage.setItem(backgroundStorageKey, legacySavedPath);
+  return legacySavedPath;
+}
+
 function updateBackgroundPickerView(persist = true) {
   const isGrid = backgroundViewMode === 'grid';
   backgroundPickerList.classList.toggle('is-grid', isGrid);
@@ -516,18 +562,22 @@ async function applyBackground(backgroundFile) {
 }
 
 async function initializeBackgroundPicker() {
-  const getMediaFiles = getElectronApiMethod('getMediaFiles');
-  if (!getMediaFiles) {
-    showBackgroundPickerMessage('La selección de fondos solo está disponible en la aplicación de escritorio.');
-    return;
-  }
+  if (isAndroidCapacitor()) {
+    backgroundFiles = getMobileBackgroundFiles();
+  } else {
+    const getMediaFiles = getElectronApiMethod('getMediaFiles');
+    if (!getMediaFiles) {
+      showBackgroundPickerMessage('La selección de fondos solo está disponible en la aplicación de escritorio.');
+      return;
+    }
 
-  try {
-    backgroundFiles = await getMediaFiles();
-  } catch (error) {
-    console.error('No se pudieron leer los fondos de la carpeta assets:', error);
-    showBackgroundPickerMessage(error.message || 'No se pudieron cargar los fondos disponibles.');
-    return;
+    try {
+      backgroundFiles = await getMediaFiles();
+    } catch (error) {
+      console.error('No se pudieron leer los fondos de la carpeta assets:', error);
+      showBackgroundPickerMessage(error.message || 'No se pudieron cargar los fondos disponibles.');
+      return;
+    }
   }
 
   backgroundFiles.sort((first, second) => first.relativePath.localeCompare(second.relativePath));
@@ -558,7 +608,7 @@ async function initializeBackgroundPicker() {
   const savedViewMode = localStorage.getItem(backgroundViewStorageKey);
   setBackgroundViewMode(savedViewMode === 'grid' ? 'grid' : 'list', false);
 
-  const savedPath = localStorage.getItem(backgroundStorageKey);
+  const savedPath = getSavedBackgroundPath();
   const selectedBackground = backgroundFiles.find(file => file.relativePath === savedPath)
     || backgroundFiles.find(file => file.relativePath === 'background.mp4')
     || backgroundFiles[0];
@@ -632,8 +682,15 @@ const btnClearCache = document.getElementById('btn-clear-cache');
 // --- LÓGICA DEL BOTÓN JUGAR AHORA (MINECRAFT BEDROCK) ---
 if (playBtn) {
   playBtn.addEventListener('click', async () => {
-    const launchMinecraft = getElectronApiMethod('launchMinecraft');
-    if (!launchMinecraft) {
+    if (isAndroidCapacitor()) {
+      statusText.textContent = 'Abriendo Minecraft...';
+      window.location.href = 'minecraft://';
+      return;
+    }
+
+    const launchGame = getElectronApiMethod('launchGame')
+      || getElectronApiMethod('launchMinecraft');
+    if (!launchGame) {
       showDesktopOnlyMessage();
       return;
     }
@@ -644,7 +701,7 @@ if (playBtn) {
 
     try {
       statusText.textContent = 'Iniciando Dedsafío 3...';
-      const result = await launchMinecraft();
+      const result = await launchGame();
       statusText.textContent = result.message;
       if (!result.success) alert(result.message);
     } catch (error) {
@@ -671,6 +728,11 @@ function resetPlayButton() {
 // --- LÓGICA DEL BOTÓN DE DISCORD ---
 if (discordBtn) {
   discordBtn.addEventListener('click', async () => {
+    if (isAndroidCapacitor()) {
+      window.open(DISCORD_INVITE_URL, '_blank');
+      return;
+    }
+
     const openDiscord = getElectronApiMethod('openDiscord');
     if (!openDiscord) {
       showDesktopOnlyMessage();
@@ -689,6 +751,11 @@ if (discordBtn) {
 // --- LÓGICA DE LOS BOTONES DE AJUSTES DE FPS ---
 if (btnOptHigh) {
   btnOptHigh.addEventListener('click', async () => {
+    if (isAndroidCapacitor()) {
+      statusText.textContent = 'Android administra automáticamente los recursos del juego.';
+      return;
+    }
+
     const setMinecraftPriority = getElectronApiMethod('setMinecraftPriority');
     if (!setMinecraftPriority) {
       showDesktopOnlyMessage();
@@ -711,6 +778,27 @@ if (btnOptHigh) {
 
 if (btnClearCache) {
   btnClearCache.addEventListener('click', async () => {
+    if (isAndroidCapacitor()) {
+      const apkInstaller = window.Capacitor?.Plugins?.ApkInstaller;
+      if (typeof apkInstaller?.cleanResidualApks !== 'function') {
+        statusText.textContent = 'La limpieza de APKs no está disponible en esta versión.';
+        return;
+      }
+
+      btnClearCache.disabled = true;
+      statusText.textContent = 'Limpiando APKs temporales del actualizador...';
+      try {
+        await apkInstaller.cleanResidualApks();
+        statusText.textContent = 'APKs temporales eliminados.';
+      } catch (error) {
+        console.error('No se pudieron limpiar los APKs temporales:', error);
+        statusText.textContent = error.message || 'No se pudieron limpiar los APKs temporales.';
+      } finally {
+        btnClearCache.disabled = false;
+      }
+      return;
+    }
+
     const clearCache = getElectronApiMethod('clearCache');
     if (!clearCache) {
       showDesktopOnlyMessage();
