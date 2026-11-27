@@ -3,4 +3,6 @@ dist/
 electron-bin/
 android/app/build/
 *.jks
+*.keystore
+keystore.properties
 *.apk

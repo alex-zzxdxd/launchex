@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Launchex</title>
   <link rel="stylesheet" href="style.css">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co https://cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://*.supabase.co; img-src 'self' data: file:; media-src 'self' file:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co https://cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://*.supabase.co https://github.com https://raw.githubusercontent.com https://*.githubusercontent.com; img-src 'self' data: file:; media-src 'self' file:;">
 </head>
 <body>
   <!-- Video de fondo animado -->
@@ -259,9 +259,25 @@
     <div id="music-track-list" class="music-track-list"></div>
   </section>
 
+  <div id="update-modal" class="update-modal" role="dialog" aria-modal="true" aria-labelledby="update-title" aria-describedby="update-description" hidden>
+    <div class="update-card">
+      <span class="update-badge">ACTUALIZACIÓN DISPONIBLE</span>
+      <h2 id="update-title">Nueva versión de Launchex</h2>
+      <p id="update-description">Hay una versión nueva disponible para instalar.</p>
+      <p class="update-version">Versión <strong id="update-version"></strong></p>
+      <p id="update-error" class="update-error" role="alert" hidden></p>
+      <div class="update-actions">
+        <button id="update-dismiss" class="update-dismiss" type="button">Ahora no</button>
+        <button id="update-install" class="update-install" type="button">Actualizar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SDK de Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@7.6.10/dist/capacitor.js"></script>
 
+  <script type="module" src="updater.js"></script>
   <!-- Archivo principal de lógica con type="module" -->
   <script type="module" src="renderer.js"></script>
 </body>

@@ -1,14 +1,56 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file("../keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { stream ->
+        keystoreProperties.load(stream)
+    }
+}
+
 android {
     namespace "com.alex.launchex"
     compileSdk rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                def requiredProperties = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+                def missingProperties = requiredProperties.findAll {
+                    !keystoreProperties.getProperty(it)
+                }
+                if (!missingProperties.isEmpty()) {
+                    throw new GradleException(
+                        "Missing required properties in keystore.properties: ${missingProperties.join(', ')}"
+                    )
+                }
+
+                def configuredStorePath = keystoreProperties.getProperty('storeFile')
+                def configuredStoreFile = new File(configuredStorePath)
+                if (!configuredStoreFile.isAbsolute()) {
+                    def storeFileCandidates = [
+                        file(configuredStorePath),
+                        new File(keystorePropertiesFile.parentFile, configuredStorePath)
+                    ]
+                    configuredStoreFile = storeFileCandidates.find { it.isFile() }
+                        ?: storeFileCandidates[0]
+                }
+                if (!configuredStoreFile.isFile()) {
+                    throw new GradleException("Keystore file does not exist: ${configuredStoreFile}")
+                }
+
+                storeFile configuredStoreFile
+                storePassword keystoreProperties.getProperty('storePassword')
+                keyAlias keystoreProperties.getProperty('keyAlias')
+                keyPassword keystoreProperties.getProperty('keyPassword')
+            }
+        }
+    }
     defaultConfig {
         applicationId "com.alex.launchex"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "2.4.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,6 +60,9 @@ android {
     }
     buildTypes {
         release {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
